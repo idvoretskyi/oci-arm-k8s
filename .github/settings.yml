@@ -2,14 +2,10 @@
 # Used with the GitHub Settings app: https://github.com/apps/settings
 
 repository:
-  # Repository name and description
-  name: oci-k8s-arm
-  description: Create an ARM64 Kubernetes cluster (OKE) on Oracle Cloud Infrastructure using OpenTofu
-  
-  # Homepage URL (pointing to the project documentation)
-  homepage: https://github.com/idvoretskyi/oci-k8s
-  
-  # Repository topics
+  name: oci-arm-k8s
+  description: ARM64 Kubernetes cluster (OKE) on Oracle Cloud Infrastructure using OpenTofu — CNCF demo
+  homepage: https://github.com/idvoretskyi/oci-arm-k8s
+
   topics:
     - kubernetes
     - oci
@@ -20,23 +16,19 @@ repository:
     - prometheus
     - grafana
     - monitoring
-  
-  # Repository visibility
+    - cncf
+    - arm64
+
   private: false
-  
-  # Repository features
+
   has_issues: true
   has_projects: true
   has_wiki: true
   has_downloads: true
-  
-  # Default branch
-  default_branch: main
-  
-  # Enable GitHub discussions
   has_discussions: true
-  
-  # Branch protection
+
+  default_branch: main
+
   allow_squash_merge: true
   allow_merge_commit: true
   allow_rebase_merge: true
@@ -57,19 +49,68 @@ branches:
       required_linear_history: false
 
 # Labels for issues and pull requests
+# Keep in sync with labels referenced in .github/dependabot.yml and workflows.
 labels:
+  # ── Issue triage ──────────────────────────────────────────────────────────────
   - name: "bug"
     color: "d73a4a"
     description: "Something isn't working"
+
   - name: "documentation"
     color: "0075ca"
     description: "Improvements or additions to documentation"
+
   - name: "enhancement"
     color: "a2eeef"
     description: "New feature or request"
+
   - name: "good first issue"
     color: "7057ff"
     description: "Good for newcomers"
+
   - name: "help wanted"
     color: "008672"
     description: "Extra attention is needed"
+
+  - name: "question"
+    color: "d876e3"
+    description: "Further information is requested"
+
+  - name: "wontfix"
+    color: "ffffff"
+    description: "This will not be worked on"
+
+  - name: "duplicate"
+    color: "cfd3d7"
+    description: "This issue or pull request already exists"
+
+  # ── Dependencies (Dependabot) ─────────────────────────────────────────────────
+  - name: "dependencies"
+    color: "0366d6"
+    description: "Pull requests that update a dependency file"
+
+  - name: "github-actions"
+    color: "000000"
+    description: "Pull requests that update GitHub Actions"
+
+  - name: "opentofu"
+    color: "7b42bc"
+    description: "Pull requests that update OpenTofu provider or module versions"
+
+  # ── Security ──────────────────────────────────────────────────────────────────
+  - name: "security"
+    color: "e11d48"
+    description: "Security-related issues or improvements"
+
+  # ── PR / workflow ─────────────────────────────────────────────────────────────
+  - name: "breaking change"
+    color: "b60205"
+    description: "Introduces a breaking change"
+
+  - name: "refactor"
+    color: "fbca04"
+    description: "Code refactoring with no functional change"
+
+  - name: "ci"
+    color: "0e8a16"
+    description: "CI/CD pipeline changes"
