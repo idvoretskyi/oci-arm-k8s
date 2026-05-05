@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '0 8 * * 1'  # Every Monday at 08:00 UTC
 
+# Opt into Node.js 24 for all actions ahead of the June 2026 forced migration.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   security-events: write  # Required for uploading SARIF results
@@ -33,7 +37,7 @@ jobs:
           soft_fail: true
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: checkov.sarif
@@ -75,7 +79,7 @@ jobs:
           fi
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: terrascan.sarif
