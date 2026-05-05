@@ -1,25 +1,58 @@
 version: 2
-updates:
-  # Terraform provider and module version updates
-  - package-ecosystem: "terraform"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "03:00"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "terraform"
 
-  # GitHub Actions workflow updates
+updates:
+  # ── GitHub Actions ────────────────────────────────────────────────────────────
+  # Keeps workflow action versions (actions/checkout, codeql-action, etc.) current.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "03:00"
+      timezone: "UTC"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "github-actions"
+    commit-message:
+      prefix: "ci"
+
+  # ── OpenTofu — root configuration ────────────────────────────────────────────
+  # Tracks OCI, kubernetes, helm provider version constraints in tf/.
+  - package-ecosystem: "terraform"
+    directory: "/tf"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "opentofu"
+    commit-message:
+      prefix: "deps(tf)"
+    groups:
+      providers:
+        patterns:
+          - "*"
+
+  # ── OpenTofu — monitoring module ──────────────────────────────────────────────
+  # Tracks kubernetes and helm provider constraints in modules/monitoring/.
+  - package-ecosystem: "terraform"
+    directory: "/modules/monitoring"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "opentofu"
+    commit-message:
+      prefix: "deps(monitoring)"
+    groups:
+      providers:
+        patterns:
+          - "*"
