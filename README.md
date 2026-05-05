@@ -1,92 +1,156 @@
-# OCI ARM Kubernetes Cluster
+# OCI ARM Kubernetes Cluster (CNCF Demo)
 
-[![Security Scan](https://github.com/idvoretskyi/oci-k8s/actions/workflows/security-scan.yml/badge.svg)](https://github.com/idvoretskyi/oci-k8s/actions/workflows/security-scan.yml)
+[![Security Scan](https://github.com/idvoretskyi/oci-arm-k8s/actions/workflows/security-scan.yml/badge.svg)](https://github.com/idvoretskyi/oci-arm-k8s/actions/workflows/security-scan.yml)
 
-Simple OpenTofu configuration for deploying an ARM-based OKE cluster on Oracle Cloud Infrastructure (OCI). Defaults target the London region and follow Oracle guidance: public subnet for API/LB and private subnet for worker nodes.
+OpenTofu configuration for a **$0/month** ARM-based OKE demo cluster on Oracle Cloud Infrastructure. Targets the OCI Always Free tier, auto-upgrades to the latest Kubernetes version on each apply, and implements a CIS Kubernetes/OCI baseline.
 
 ## Features
 
-- ARM instances: VM.Standard.A1.Flex (ARM64)
-- Automatic image selection: latest Oracle Linux 8 ARM image
-- Minimal input: reads tenancy/user from ~/.oci/config by default
-- Public API/LB + private worker subnets (recommended)
-- Monitoring optional via kube-prometheus-stack (Grafana/Prometheus)
-- London region by default (uk-london-1)
+- **ARM instances** — VM.Standard.A1.Flex (ARM64), always-free tier
+- **Auto-upgrade K8s** — always tracks the latest OKE version; no manual version pinning required
+- **$0/month** — sized for OCI Always Free (2 OCPU, 12 GB RAM, service gateway only)
+- **CIS baseline** — split security lists, restricted API access variable, PSP removed, resource tagging
+- **OpenTofu** — OpenTofu-native; no Terraform required
+- **Monitoring** — kube-prometheus-stack (Grafana + Prometheus), tuned for the demo node
+- **Metrics server** — deployed via Helm for idempotency
+- **No NAT gateway** — OCI Service Gateway handles OCI registry pulls for free; enable NAT via variable if DockerHub/GitHub egress is needed
 
 ## Architecture
 
-- Nodes: configurable; defaults to 2x ARM nodes (2 OCPUs, 8GB RAM each)
-- Network: VCN with public subnet (API/LB) and private subnet (nodes) + NAT
-- Security: minimal required rules (intra-VCN, API 6443, ICMP); tighten as needed
+```
+VCN (10.0.0.0/16)
+├── public subnet (10.0.1.0/24)  — API endpoint, LB
+│     └── security: api_allowed_cidrs on 6443, intra-VCN
+└── private subnet (10.0.2.0/24) — ARM worker nodes
+      └── security: intra-VCN only (no direct API exposure)
+
+Egress: OCI Service Gateway (free) → OCI Registry / Object Storage
+        Optional NAT Gateway ($32/mo) for unrestricted internet
+```
+
+- **Node**: 1 × VM.Standard.A1.Flex — 2 OCPU, 12 GB RAM (Always Free)
+- **Kubernetes**: latest available version (auto-upgraded)
+- **OKE type**: Basic cluster (free; Enhanced costs ~$0.10/hr)
 
 ## Prerequisites
 
-- OCI CLI configured (used for auth and kubeconfig token)
-- OpenTofu 1.5+
-- kubectl
+- OCI CLI configured (`~/.oci/config`) — used for auth and kubeconfig tokens
+- [OpenTofu](https://opentofu.org) 1.6+
+- `kubectl`
 
 ## Quick Start
 
-1. cd into Terraform directory
-   ```bash
-   cd tf
-   ```
+```bash
+cd tf
+tofu init
+tofu apply -var='compartment_ocid=<your-compartment-ocid>' \
+           -var='grafana_admin_password=<your-password>'
+```
 
-2. Optional: adjust variables in `terraform.tfvars` (defaults read tenancy/user from `~/.oci/config`)
-
-3. Deploy
-   ```bash
-   tofu init
-   tofu apply
-   ```
-
-4. Generate kubeconfig and verify
-   ```bash
-   # Get the command from outputs and run it
-   tofu output kubeconfig_command
-   # example output runs `oci ce cluster create-kubeconfig ...`
-   kubectl get nodes -o wide
-   ```
+Configure kubectl:
+```bash
+tofu output kubeconfig_command  # prints the oci ce cluster create-kubeconfig command
+# run the printed command, then:
+kubectl get nodes -o wide
+```
 
 ## Configuration
 
-Common variables (`tf/variables.tf`):
+All variables in `tf/variables.tf`. Key ones:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `compartment_ocid` | **required** | OCI compartment OCID |
 | `region` | `uk-london-1` | Deployment region |
-| `tenancy_ocid` | `null` | Read from `~/.oci/config` if null |
-| `cluster_name` | `null` | Defaults to `{username}-arm-oke-cluster` if null |
-| `kubernetes_version` | `null (auto-detect latest)` | Cluster version (null = latest supported) |
-| `node_count` | `2` | Worker nodes count |
-| `node_memory_gb` | `8` | Memory per node (GB) |
+| `cluster_name` | `arm-oke-demo` | Cluster display name |
+| `kubernetes_version` | `null` (latest) | Pin with e.g. `"v1.31.1"`; null = auto-upgrade |
+| `node_pool_kubernetes_version` | `null` (follows cluster) | Lag node pool during staged upgrades |
+| `node_count` | `1` | Worker nodes (1 fits Always Free) |
 | `node_ocpus` | `2` | OCPUs per node |
-| `grafana_admin_password` | `admin123!` | Change for production |
+| `node_memory_gb` | `12` | Memory GB per node |
+| `api_allowed_cidrs` | `["0.0.0.0/0"]` | CIS K8s 5.4.2: restrict to operator CIDRs |
+| `enable_nat_gateway` | `false` | Enable NAT gateway (~$32/mo) for internet egress |
+| `enable_flow_logs` | `false` | VCN flow logs (CIS OCI 4.x) |
+| `grafana_admin_password` | **required** | Grafana admin password |
 
-## Cost Optimization
+## Cost
 
-ARM (A1.Flex) is very cost-efficient:
-- Always Free eligible (up to 4 OCPUs, 24GB RAM)
-- Significant savings vs. equivalent x86 shapes
+This configuration is designed to stay at **$0/month**:
+
+| Resource | Cost |
+|----------|------|
+| VM.Standard.A1.Flex 2 OCPU / 12 GB | $0 (Always Free) |
+| OKE Basic cluster | $0 |
+| VCN + Service Gateway | $0 |
+| NAT Gateway (default: disabled) | $0 (enable = ~$32/mo) |
+| 50 GB boot volume | $0 (Free tier includes 200 GB) |
+| Monitoring PVs (~14 GB total) | $0 (within free tier) |
+| **Total** | **$0** |
+
+To add unrestricted internet egress for pods (e.g. DockerHub):
+```hcl
+enable_nat_gateway = true  # adds ~$32/month
+```
+
+## Upgrading Kubernetes
+
+By default (`kubernetes_version = null`), every `tofu apply` upgrades both the cluster and node pool to the latest available version in the region.
+
+**Staged upgrade** (upgrade cluster first, validate, then node pool):
+```hcl
+# Step 1: apply with node pool lagging
+node_pool_kubernetes_version = "v1.30.1"  # keep node pool here
+
+# Step 2: after cluster upgrade validates, remove the override
+node_pool_kubernetes_version = null  # now node pool catches up
+```
+
+**Pin a specific version** (freeze upgrades):
+```hcl
+kubernetes_version = "v1.31.1"
+```
+
+**Check what version is available**:
+```bash
+tofu output latest_available_kubernetes_version
+```
+
+## CIS Compliance
+
+See [`docs/cis-compliance.md`](docs/cis-compliance.md) for a full control mapping.
+
+Summary of what this configuration addresses:
+
+- **CIS K8s 5.1.x** — Kubernetes Dashboard and Tiller disabled
+- **CIS K8s 5.4.2** — API server access restricted via `api_allowed_cidrs`
+- **CIS K8s** — PSP removed (deprecated/removed in K8s 1.25+); use Pod Security Admission or Kyverno
+- **CIS OCI Net** — Split security lists (public/private); private workers not reachable on API port
+- **CIS OCI 4.x** — VCN flow logs available via `enable_flow_logs = true`
+- **Encryption** — PV encryption in transit enabled; OCI boot volumes encrypted at rest by default
+- **Tagging** — All resources tagged with `ManagedBy=OpenTofu`, `Purpose=CNCF-demo`, `Environment=demo`
 
 ## Monitoring
 
-If monitoring is enabled, useful outputs are provided:
-- `grafana_url`, `prometheus_url`, `monitoring_endpoints`
-- Default Grafana username: `admin`; password from `grafana_admin_password`
+kube-prometheus-stack is deployed by default. Access Grafana via port-forward:
+
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+# open http://localhost:3000  (admin / <grafana_admin_password>)
+```
 
 ## Troubleshooting
 
-ARM capacity can be limited. Try:
-- Reduce `node_count` (e.g., to 1)
-- Retry later or choose another AD/region
+**ARM capacity limited**: OCI Always Free ARM capacity can be constrained. Retry later or try a different region (`us-ashburn-1` often has more capacity).
 
-Images are auto-selected for ARM (Oracle Linux 8). If unavailable, retry later.
+**Images not pulling**: By default only OCI Registry is reachable via Service Gateway. For DockerHub/GHCR images, set `enable_nat_gateway = true`.
+
+**Cluster not ready after apply**: The `oci` CLI is required for the kubernetes/helm providers (exec-based auth). Ensure `oci` is installed and `~/.oci/config` is valid.
 
 ## More docs
 
-See `tf/README.md` for a deeper dive into architecture, configuration, and testing.
+- `tf/README.md` — deep-dive on configuration and upgrade workflow
+- `docs/cis-compliance.md` — CIS control mapping
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file.
+MIT — see [LICENSE](LICENSE).
