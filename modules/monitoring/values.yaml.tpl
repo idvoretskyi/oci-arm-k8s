@@ -1,18 +1,25 @@
 # Kube-Prometheus-Stack Helm Values Template
-# This template is used by Terraform to generate the values.yaml for the Helm chart
+# Tuned for a single ARM A1.Flex demo node (2 OCPU / 12 GB RAM).
+# All components run on arm64; images are multi-arch from upstream.
 
-# Global settings
+# ── Global ───────────────────────────────────────────────────────────────────────
+
 fullnameOverride: ""
 nameOverride: ""
 
-# Common labels to apply to all resources
 commonLabels:
-  app.kubernetes.io/managed-by: terraform
+  app.kubernetes.io/managed-by: opentofu
 
-# Prometheus configuration
+# ARM64 node selector applied globally
+# kube-prometheus-stack propagates this via global.nodeSelector
+global:
+  nodeSelector:
+    kubernetes.io/arch: arm64
+
+# ── Prometheus ───────────────────────────────────────────────────────────────────
+
 prometheus:
   prometheusSpec:
-    # Storage configuration
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -21,50 +28,43 @@ prometheus:
           resources:
             requests:
               storage: ${prometheus_storage_size}
-    
-    # Data retention
+
     retention: ${prometheus_retention}
     retentionSize: ${prometheus_retention_size}
-    
-    # Resource limits (minimal for single ARM node)
+
+    # Demo-friendly resource budget
     resources:
       limits:
-        cpu: 200m
+        cpu: 500m
         memory: 1Gi
       requests:
         cpu: 100m
         memory: 512Mi
-    
-    # Security context
+
     securityContext:
       runAsNonRoot: true
       runAsUser: 65534
       fsGroup: 65534
-    
-    # Service monitor selector
+
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
-    
-    # Enable admin API for management
-    enableAdminAPI: true
-    
-    # Web configuration
-    web:
-      pageTitle: "Prometheus - OKE Monitoring"
 
-# Grafana configuration
+    enableAdminAPI: true
+
+    web:
+      pageTitle: "Prometheus - OKE ARM Demo"
+
+# ── Grafana ───────────────────────────────────────────────────────────────────────
+
 grafana:
-  # Service configuration
   service:
     type: ${grafana_service_type}
     port: 80
     targetPort: 3000
-  
-  # Admin credentials
+
   adminPassword: ${grafana_admin_password}
-  
-  # Persistence
+
   persistence:
     enabled: ${grafana_persistence_enabled}
     type: pvc
@@ -74,23 +74,20 @@ grafana:
     size: ${grafana_storage_size}
     finalizers:
       - kubernetes.io/pvc-protection
-  
-  # Resources (reduced for small ARM nodes)
+
   resources:
     limits:
       cpu: 200m
-      memory: 512Mi
-    requests:
-      cpu: 100m
       memory: 256Mi
-  
-  # Security context
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
   securityContext:
     runAsNonRoot: true
     runAsUser: 472
     fsGroup: 472
-  
-  # Grafana configuration
+
   grafana.ini:
     server:
       domain: localhost
@@ -108,13 +105,9 @@ grafana:
       enabled: false
     log:
       mode: console
-    grafana_net:
-      url: https://grafana.net
-  
-  # Default dashboards
+
   defaultDashboardsEnabled: true
-  
-  # Sidecar for loading dashboards
+
   sidecar:
     dashboards:
       enabled: true
@@ -128,11 +121,14 @@ grafana:
       label: grafana_datasource
       labelValue: "1"
 
-# Alertmanager configuration (disabled for resource constraints)
+# ── Alertmanager ─────────────────────────────────────────────────────────────────
+# Disabled to conserve resources on the demo node.
+
 alertmanager:
   enabled: false
 
-# Node Exporter configuration
+# ── Node Exporter ─────────────────────────────────────────────────────────────────
+
 nodeExporter:
   enabled: ${node_exporter_enabled}
   resources:
@@ -140,10 +136,11 @@ nodeExporter:
       cpu: 100m
       memory: 64Mi
     requests:
-      cpu: 50m
+      cpu: 20m
       memory: 32Mi
 
-# Kube State Metrics configuration
+# ── Kube State Metrics ────────────────────────────────────────────────────────────
+
 kubeStateMetrics:
   enabled: ${kube_state_metrics_enabled}
   resources:
@@ -151,10 +148,11 @@ kubeStateMetrics:
       cpu: 100m
       memory: 128Mi
     requests:
-      cpu: 50m
+      cpu: 20m
       memory: 64Mi
 
-# Prometheus Operator configuration
+# ── Prometheus Operator ───────────────────────────────────────────────────────────
+
 prometheusOperator:
   resources:
     limits:
@@ -163,19 +161,19 @@ prometheusOperator:
     requests:
       cpu: 50m
       memory: 128Mi
-  
-  # Security context
+
   securityContext:
     runAsNonRoot: true
     runAsUser: 65534
     fsGroup: 65534
 
-# Default rules and monitoring
+# ── Default rules ─────────────────────────────────────────────────────────────────
+
 defaultRules:
   create: true
   rules:
-    alertmanager: true
-    etcd: true
+    alertmanager: false   # alertmanager disabled
+    etcd: false           # OKE manages etcd; no scrape access
     configReloaders: true
     general: true
     k8s: true
@@ -184,14 +182,14 @@ defaultRules:
     kubeApiserverHistogram: true
     kubeApiserverSlos: true
     kubelet: true
-    kubeProxy: true
+    kubeProxy: false      # OKE doesn't expose kube-proxy metrics
     kubePrometheusGeneral: true
     kubePrometheusNodeRecording: true
     kubernetesApps: true
     kubernetesResources: true
     kubernetesStorage: true
     kubernetesSystem: true
-    kubeScheduler: true
+    kubeScheduler: false  # OKE managed; no scrape access
     kubeStateMetrics: true
     network: true
     node: true
@@ -200,7 +198,9 @@ defaultRules:
     prometheus: true
     prometheusOperator: true
 
-# Disable components not needed in OKE
+# ── Disabled OKE-managed components ──────────────────────────────────────────────
+# These are managed by OCI/OKE and are not accessible for scraping.
+
 kubeApiServer:
   enabled: false
 

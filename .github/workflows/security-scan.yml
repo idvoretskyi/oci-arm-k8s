@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '0 8 * * 1'  # Run every Monday at 8:00 AM
+    - cron: '0 8 * * 1'  # Every Monday at 08:00 UTC
 
 permissions:
   contents: read
@@ -21,18 +21,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12  # Use a specific version instead of master
+        uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
+          framework: terraform  # Checkov parses OpenTofu HCL identically
           output_format: sarif
-          output_file_path: checkov.sarif  # Fixed parameter name (was output_file)
+          output_file_path: checkov.sarif
           soft_fail: true
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v4  # Updated from v2 to v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: checkov.sarif
@@ -44,49 +45,37 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install Terrascan
         run: |
           TERRASCAN_VERSION="v1.19.1"
           if ! command -v jq >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y jq
+            sudo apt-get update && sudo apt-get install -y jq
           fi
-          # Use jq to reliably extract the browser_download_url for the Linux x86_64 asset
-          curl -L "$(curl -s "https://api.github.com/repos/tenable/terrascan/releases/tags/${TERRASCAN_VERSION}" | jq -r '.assets[] | select(.name | test("Linux_x86_64.tar.gz$")) | .browser_download_url')" -o terrascan.tar.gz
+          curl -L "$(curl -s "https://api.github.com/repos/tenable/terrascan/releases/tags/${TERRASCAN_VERSION}" \
+            | jq -r '.assets[] | select(.name | test("Linux_x86_64.tar.gz$")) | .browser_download_url')" \
+            -o terrascan.tar.gz
           tar -xf terrascan.tar.gz terrascan
           sudo mv terrascan /usr/local/bin/
           rm terrascan.tar.gz
 
-      - name: Verify Terrascan Installation
-        run: |
-          which terrascan
-          terrascan version
+      - name: Verify Terrascan
+        run: terrascan version
 
       - name: Run Terrascan
-        run: |
-          terrascan scan -d . -o sarif --output-file terrascan.sarif -v || true
+        # Terrascan uses the same HCL parser for Terraform and OpenTofu.
+        run: terrascan scan -d . -o sarif --output-file terrascan.sarif -v || true
 
-      - name: Create Fallback SARIF if Missing
+      - name: Create fallback SARIF if missing
         run: |
           if [ ! -f terrascan.sarif ]; then
-            echo "Warning: terrascan.sarif was not created. Creating empty SARIF file."
-            mkdir -p reports
-            printf '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"terrascan","version":"fallback"}},"results":[]}]}' > terrascan.sarif
+            printf '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"terrascan","version":"fallback"}},"results":[]}]}' \
+              > terrascan.sarif
           fi
-
-      - name: Verify SARIF file created
-        run: |
-          if [ ! -f terrascan.sarif ]; then
-            echo "terrascan.sarif not found! Check terrascan output for errors."
-            exit 1
-          fi
-          ls -lh terrascan.sarif
-          head -20 terrascan.sarif
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v4  # Updated from v2 to v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: terrascan.sarif
