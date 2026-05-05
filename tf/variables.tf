@@ -50,7 +50,8 @@ variable "node_pool_kubernetes_version" {
     Defaults to null, which tracks the cluster version.
     Set explicitly to lag behind the cluster during a staged upgrade:
       1. Apply with cluster at vX.Y — node pool follows.
-      2. Set this to vX.(Y-1) before bumping the cluster to vX.(Y+1).
+      2. Set this to vX.Y (current version) before bumping the cluster to vX.(Y+1).
+      3. After the cluster upgrade validates, remove the override so the node pool catches up.
   EOT
   type        = string
   default     = null
