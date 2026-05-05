@@ -19,29 +19,30 @@ permissions:
 
 jobs:
 
-  checkov:
-    name: Checkov Scan
+  trivy:
+    name: Trivy Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12
+      - name: Run Trivy (IaC / misconfiguration scan)
+        uses: aquasecurity/trivy-action@0.31.0
         with:
-          directory: .
-          framework: terraform  # Checkov parses OpenTofu HCL identically
-          output_format: sarif
-          output_file_path: checkov.sarif
-          soft_fail: true
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy.sarif
+          exit-code: '0'          # never fail the job; alerts surface via SARIF
+          severity: CRITICAL,HIGH,MEDIUM
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
-          sarif_file: checkov.sarif
-          category: checkov
+          sarif_file: trivy.sarif
+          category: trivy
 
   terrascan:
     name: Terrascan Scan
