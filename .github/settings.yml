@@ -3,11 +3,11 @@
 
 repository:
   # Repository name and description
-  name: oci-k8s-arm
+  name: oci-arm-k8s
   description: Create an ARM64 Kubernetes cluster (OKE) on Oracle Cloud Infrastructure using OpenTofu
   
   # Homepage URL (pointing to the project documentation)
-  homepage: https://github.com/idvoretskyi/oci-k8s
+  homepage: https://github.com/idvoretskyi/oci-arm-k8s
   
   # Repository topics
   topics:

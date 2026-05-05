@@ -1,6 +1,6 @@
 # OCI ARM Kubernetes Cluster
 
-[![Security Scan](https://github.com/idvoretskyi/oci-k8s/actions/workflows/security-scan.yml/badge.svg)](https://github.com/idvoretskyi/oci-k8s/actions/workflows/security-scan.yml)
+[![Security Scan](https://github.com/idvoretskyi/oci-arm-k8s/actions/workflows/security-scan.yml/badge.svg)](https://github.com/idvoretskyi/oci-arm-k8s/actions/workflows/security-scan.yml)
 
 Simple OpenTofu configuration for deploying an ARM-based OKE cluster on Oracle Cloud Infrastructure (OCI). Defaults target the London region and follow Oracle guidance: public subnet for API/LB and private subnet for worker nodes.
 
