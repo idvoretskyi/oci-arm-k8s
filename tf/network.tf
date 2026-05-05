@@ -180,7 +180,9 @@ resource "oci_core_network_security_group" "oke_cluster_nsg" {
 }
 
 # API ingress — restricted to var.api_allowed_cidrs (CIS K8s 5.4.2)
-resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_ingress_k8s" {
+# CKV_OCI_21: OCI NSG security rules do not support is_stateless (that field is
+# specific to security list rules). NSG rules are inherently stateful; skip is correct.
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_ingress_k8s" { #checkov:skip=CKV_OCI_21:OCI NSG rules have no is_stateless attribute; stateless is a security-list-only concept
   for_each = toset(var.api_allowed_cidrs)
 
   network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
@@ -266,7 +268,7 @@ resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_icmp" {
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_icmp" { #checkov:skip=CKV2_OCI_2:ICMP has no port concept; protocol 1 cannot carry RDP (TCP/3389)
   network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
   direction                 = "EGRESS"
   protocol                  = "1" # ICMP

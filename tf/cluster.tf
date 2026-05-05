@@ -11,13 +11,10 @@ data "oci_containerengine_cluster_option" "options" {
 # PSP (PodSecurityPolicy) removed: deprecated in K8s 1.21, removed in K8s 1.25+.
 # Use Pod Security Admission (built-in, no IaC required) or a policy engine
 # (Kyverno / OPA Gatekeeper) for runtime enforcement.
-# CKV2_OCI_6: checkov expects is_pod_security_policy_enabled=true, but PSP was
-# removed from Kubernetes in v1.25. Setting it on modern OKE clusters causes an
-# apply error. PSA (Pod Security Admission) is used instead — enforced at the
-# namespace level via labels, not a cluster API flag.
-#checkov:skip=CKV2_OCI_6:PSP removed in K8s 1.25+; Pod Security Admission enforced via namespace labels instead
+# CKV2_OCI_6: PSP was removed from Kubernetes in v1.25; setting it on modern OKE
+# clusters causes an apply error. PSA is enforced via namespace labels instead.
 
-resource "oci_containerengine_cluster" "arm_cluster" {
+resource "oci_containerengine_cluster" "arm_cluster" { #checkov:skip=CKV2_OCI_6:PSP removed in K8s 1.25+; Pod Security Admission enforced via namespace labels
   compartment_id     = var.compartment_ocid
   kubernetes_version = local.kubernetes_version
   name               = local.cluster_name
