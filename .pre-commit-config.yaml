@@ -1,12 +1,11 @@
 repos:
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.83.6
+    rev: v1.96.1
     hooks:
-      - id: terraform_fmt
-      - id: terraform_validate
-      - id: terraform_tfsec
-      - id: terraform_checkov
-      - id: terraform_docs
+      - id: tofu_fmt
+      - id: tofu_validate
+      - id: tofu_checkov
+      - id: tofu_docs
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0

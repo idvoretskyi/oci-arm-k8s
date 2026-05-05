@@ -1,87 +1,102 @@
 variable "cluster_id" {
-  type = string
+  description = "OCID of the OKE cluster."
+  type        = string
   validation {
     condition     = can(regex("^ocid1\\.cluster\\.", var.cluster_id))
-    error_message = "The cluster_id must be a valid OCI cluster OCID."
+    error_message = "cluster_id must be a valid OCI cluster OCID."
   }
 }
 
 variable "monitoring_namespace" {
-  type    = string
-  default = "monitoring"
+  description = "Kubernetes namespace for monitoring components."
+  type        = string
+  default     = "monitoring"
   validation {
     condition     = can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.monitoring_namespace))
-    error_message = "The monitoring_namespace must be a valid Kubernetes namespace name."
+    error_message = "monitoring_namespace must be a valid Kubernetes namespace name."
   }
 }
 
 variable "release_name" {
-  type    = string
-  default = "kube-prometheus-stack"
+  description = "Helm release name for the kube-prometheus-stack."
+  type        = string
+  default     = "kube-prometheus-stack"
 }
 
 variable "chart_version" {
-  type    = string
-  default = "45.7.1"
+  description = "kube-prometheus-stack Helm chart version. Pinned to a recent release compatible with K8s 1.28+."
+  type        = string
+  default     = "65.8.1"
 }
 
 variable "helm_timeout" {
-  type    = number
-  default = 900
+  description = "Helm install/upgrade timeout in seconds."
+  type        = number
+  default     = 900
 }
 
 variable "storage_class" {
-  type    = string
-  default = "oci-bv"
+  description = "Storage class for persistent volumes."
+  type        = string
+  default     = "oci-bv"
 }
 
 variable "create_storage_class" {
-  type    = bool
-  default = false
+  description = "Whether to create the OCI Block Volume storage class."
+  type        = bool
+  default     = false
 }
 
+# Demo-tuned storage defaults — fits within OCI Always Free 200 GB block storage limit.
 variable "prometheus_storage_size" {
-  type    = string
-  default = "50Gi"
+  description = "Persistent volume size for Prometheus data."
+  type        = string
+  default     = "10Gi"
 }
 
 variable "prometheus_retention" {
-  type    = string
-  default = "15d"
+  description = "Prometheus data retention period."
+  type        = string
+  default     = "3d"
 }
 
 variable "prometheus_retention_size" {
-  type    = string
-  default = "45GiB"
+  description = "Prometheus data retention size limit."
+  type        = string
+  default     = "8GiB"
 }
 
 variable "grafana_storage_size" {
-  type    = string
-  default = "10Gi"
+  description = "Persistent volume size for Grafana."
+  type        = string
+  default     = "2Gi"
 }
 
 variable "grafana_persistence_enabled" {
-  type    = bool
-  default = true
+  description = "Enable Grafana persistent storage."
+  type        = bool
+  default     = true
 }
 
 variable "alertmanager_storage_size" {
-  type    = string
-  default = "10Gi"
+  description = "Persistent volume size for Alertmanager."
+  type        = string
+  default     = "2Gi"
 }
 
 variable "grafana_admin_password" {
-  type      = string
-  default   = "admin"
-  sensitive = true
+  description = "Grafana admin password. Required — no default for security reasons."
+  type        = string
+  sensitive   = true
 }
 
 variable "grafana_service_type" {
-  type    = string
-  default = "ClusterIP"
+  description = "Kubernetes service type for Grafana."
+  type        = string
+  default     = "ClusterIP"
   validation {
     condition     = contains(["ClusterIP", "NodePort", "LoadBalancer"], var.grafana_service_type)
-    error_message = "The grafana_service_type must be one of: ClusterIP, NodePort, LoadBalancer."
+    error_message = "grafana_service_type must be one of: ClusterIP, NodePort, LoadBalancer."
   }
 }
 
@@ -131,21 +146,25 @@ variable "ingress_class" {
 }
 
 variable "node_exporter_enabled" {
-  type    = bool
-  default = true
+  description = "Enable node-exporter for host-level metrics."
+  type        = bool
+  default     = true
 }
 
 variable "kube_state_metrics_enabled" {
-  type    = bool
-  default = true
+  description = "Enable kube-state-metrics for Kubernetes object metrics."
+  type        = bool
+  default     = true
 }
 
 variable "additional_helm_values" {
-  type    = map(string)
-  default = {}
+  description = "Additional Helm values to merge (map form)."
+  type        = map(string)
+  default     = {}
 }
 
 variable "tags" {
-  type    = map(string)
-  default = {}
+  description = "Freeform tags to apply to Kubernetes resources."
+  type        = map(string)
+  default     = {}
 }
