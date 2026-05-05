@@ -198,13 +198,81 @@ resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_ingres
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_all" {
+# CKV2_OCI_2 / CKV2_OCI_3: Do not allow egress on RDP (TCP/UDP 3389).
+# Split into four rules covering TCP 1-3388, TCP 3390-65535,
+# UDP 1-3388, UDP 3390-65535, plus ICMP — effectively full egress minus 3389.
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_tcp_low" {
   network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
   direction                 = "EGRESS"
-  protocol                  = "all"
+  protocol                  = "6" # TCP
   destination               = "0.0.0.0/0"
   destination_type          = "CIDR_BLOCK"
-  description               = "Allow all outbound from OKE control plane"
+  description               = "Allow TCP 1-3388 outbound from OKE control plane"
+
+  tcp_options {
+    destination_port_range {
+      min = 1
+      max = 3388
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_tcp_high" {
+  network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
+  direction                 = "EGRESS"
+  protocol                  = "6" # TCP
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+  description               = "Allow TCP 3390-65535 outbound from OKE control plane"
+
+  tcp_options {
+    destination_port_range {
+      min = 3390
+      max = 65535
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_udp_low" {
+  network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
+  direction                 = "EGRESS"
+  protocol                  = "17" # UDP
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+  description               = "Allow UDP 1-3388 outbound from OKE control plane"
+
+  udp_options {
+    destination_port_range {
+      min = 1
+      max = 3388
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_udp_high" {
+  network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
+  direction                 = "EGRESS"
+  protocol                  = "17" # UDP
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+  description               = "Allow UDP 3390-65535 outbound from OKE control plane"
+
+  udp_options {
+    destination_port_range {
+      min = 3390
+      max = 65535
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_icmp" {
+  network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
+  direction                 = "EGRESS"
+  protocol                  = "1" # ICMP
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+  description               = "Allow ICMP outbound from OKE control plane"
 }
 
 # ── Subnets ───────────────────────────────────────────────────────────────────────
