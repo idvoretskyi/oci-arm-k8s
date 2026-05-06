@@ -37,8 +37,10 @@ resource "oci_containerengine_node_pool" "arm_pool" {
     }
 
     node_pool_pod_network_option_details {
-      cni_type          = "FLANNEL_OVERLAY"
-      max_pods_per_node = 31
+      cni_type = "FLANNEL_OVERLAY"
+      # max_pods_per_node is silently ignored by OCI for FLANNEL_OVERLAY CNI
+      # (only applies to OCI_VCN_IP_NATIVE). Omitting it eliminates perpetual
+      # plan drift where OCI always reports 0 on refresh.
     }
   }
 

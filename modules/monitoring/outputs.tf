@@ -22,10 +22,6 @@ output "grafana_service_name" {
   value = "${var.release_name}-grafana"
 }
 
-output "alertmanager_service_name" {
-  value = "${var.release_name}-kube-prom-alertmanager"
-}
-
 output "grafana_admin_password" {
   value     = var.grafana_admin_password
   sensitive = true
@@ -45,9 +41,8 @@ output "storage_class" {
 
 output "monitoring_endpoints" {
   value = {
-    grafana_service      = "${var.release_name}-grafana.${kubernetes_namespace_v1.monitoring.metadata[0].name}.svc.cluster.local"
-    prometheus_service   = "${var.release_name}-kube-prom-prometheus.${kubernetes_namespace_v1.monitoring.metadata[0].name}.svc.cluster.local"
-    alertmanager_service = "${var.release_name}-kube-prom-alertmanager.${kubernetes_namespace_v1.monitoring.metadata[0].name}.svc.cluster.local"
+    grafana_service    = "${var.release_name}-grafana.${kubernetes_namespace_v1.monitoring.metadata[0].name}.svc.cluster.local"
+    prometheus_service = "${var.release_name}-kube-prom-prometheus.${kubernetes_namespace_v1.monitoring.metadata[0].name}.svc.cluster.local"
   }
 }
 

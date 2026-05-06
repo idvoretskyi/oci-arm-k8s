@@ -50,8 +50,8 @@ node_pool_kubernetes_version   = null   # follows cluster by default
 # CIS: restrict API to specific IPs (default open for demo)
 api_allowed_cidrs = ["0.0.0.0/0"]
 
-# Cost: enable NAT gateway for unrestricted internet egress (~$32/mo)
-enable_nat_gateway = false
+  # NAT gateway: free on OCI (no hourly charge); enabled by default for outbound egress
+  enable_nat_gateway = true
 
 # CIS: enable VCN flow logs
 enable_flow_logs = false

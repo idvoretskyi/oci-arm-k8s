@@ -26,7 +26,7 @@ kubectl get nodes -o wide
 ## What You Get
 
 - **ARM node** — 1 × VM.Standard.A1.Flex (2 OCPU, 12 GB RAM), Always Free; OKE Basic cluster (free)
-- **Network** — public subnet (API endpoint + LB) + private subnet (workers); OCI Service Gateway for free OCI Registry egress; optional NAT Gateway via variable
+- **Network** — public subnet (API endpoint + LB) + private subnet (workers); NAT Gateway for internet egress (free on OCI); OCI Service Gateway for low-latency OCI Registry access
 - **Auto-upgrade** — `kubernetes_version = null` (default) tracks latest OKE version in the region; pin or stage upgrades via variables
 - **Monitoring** — kube-prometheus-stack (Grafana + Prometheus) + metrics-server, tuned for the single demo node
 - **CIS baseline** — split security lists, `api_allowed_cidrs`, tagging, flow logs opt-in; see [`docs/cis-compliance.md`](docs/cis-compliance.md)
@@ -41,12 +41,12 @@ Key variables (full list in [`tf/variables.tf`](tf/variables.tf)):
 | `region` | `uk-london-1` | Deployment region |
 | `kubernetes_version` | `null` (latest) | Pin with e.g. `"v1.31.1"`; null = auto-upgrade |
 | `api_allowed_cidrs` | `["0.0.0.0/0"]` | Restrict API access to operator CIDRs (CIS K8s 5.4.2) |
-| `enable_nat_gateway` | `false` | Enable NAT gateway (~$32/mo) for unrestricted internet egress |
+| `enable_nat_gateway` | `true` | NAT gateway for private worker egress. **Free on OCI** (no hourly charge; 10 TB/month egress included). Set false only for air-gapped setups. |
 | `grafana_admin_password` | **required** | Grafana admin password |
 
 ## Cost
 
-Stays at **$0/month** on OCI Always Free. Enabling `enable_nat_gateway = true` adds ~$32/mo.
+Stays at **$0/month** on OCI Always Free. The NAT gateway has no hourly charge on OCI — only outbound data transfer applies, which is free up to 10 TB/month.
 
 ## Upgrading Kubernetes
 
@@ -76,7 +76,7 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 
 **ARM capacity limited**: OCI Always Free ARM capacity can be constrained. Retry later or try a different region (`us-ashburn-1` often has more capacity).
 
-**Images not pulling**: Only OCI Registry is reachable by default via Service Gateway. For DockerHub/GHCR images set `enable_nat_gateway = true`.
+**Images not pulling**: Worker nodes use the NAT gateway for internet egress. If you disabled it (`enable_nat_gateway = false`), only OCI Registry is reachable via Service Gateway. Re-enable NAT or supply your own image mirror.
 
 **Cluster not ready after apply**: The `oci` CLI is required for exec-based auth. Ensure it is installed and `~/.oci/config` is valid.
 

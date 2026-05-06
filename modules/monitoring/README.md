@@ -19,9 +19,8 @@ Tuned for a single ARM A1.Flex demo node (2 OCPU / 12 GB RAM) within the OCI Alw
 module "monitoring" {
   source = "./modules/monitoring"
 
-  cluster_id             = oci_containerengine_cluster.arm_cluster.id
   create_storage_class   = true
-  storage_class          = "oci-bv"
+  storage_class          = "oci-bv-paravirtualized"
   grafana_admin_password = var.grafana_admin_password
 }
 ```
@@ -45,14 +44,13 @@ module "monitoring" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| cluster_id | OCID of the OKE cluster | `string` | n/a | yes |
 | grafana_admin_password | Grafana admin password | `string` | n/a | yes |
 | monitoring_namespace | Kubernetes namespace | `string` | `"monitoring"` | no |
 | chart_version | kube-prometheus-stack chart version | `string` | `"65.8.1"` | no |
-| storage_class | Storage class for PVs | `string` | `"oci-bv"` | no |
-| prometheus_storage_size | Prometheus PV size | `string` | `"10Gi"` | no |
+| storage_class | Storage class for PVs | `string` | `"oci-bv-paravirtualized"` | no |
+| prometheus_storage_size | Prometheus PV size | `string` | `"50Gi"` | no |
 | prometheus_retention | Prometheus retention period | `string` | `"3d"` | no |
-| grafana_storage_size | Grafana PV size | `string` | `"2Gi"` | no |
+| grafana_storage_size | Grafana PV size | `string` | `"50Gi"` | no |
 | grafana_service_type | Grafana service type | `string` | `"ClusterIP"` | no |
 | grafana_ingress_enabled | Enable Grafana ingress | `bool` | `false` | no |
 | node_exporter_enabled | Enable node-exporter | `bool` | `true` | no |
@@ -67,7 +65,7 @@ module "monitoring" {
 | prometheus_url | URL to access Prometheus |
 | grafana_service_name | Grafana Kubernetes service name |
 | prometheus_service_name | Prometheus Kubernetes service name |
-| monitoring_endpoints | All monitoring service cluster-local endpoints |
+| monitoring_endpoints | Cluster-local service endpoints (grafana_service, prometheus_service) |
 
 ## Accessing Services (demo defaults — ClusterIP)
 

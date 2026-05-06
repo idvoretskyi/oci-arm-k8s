@@ -23,7 +23,7 @@ Target benchmarks: **CIS Kubernetes Benchmark v1.9** and **CIS OCI Foundations B
 |---------|-------------|----------------|
 | 2.x | Network least privilege | Private worker subnet has its own security list (`private_sl`) with no inbound API port (6443). Public subnet (`public_sl`) exposes 6443 only to `api_allowed_cidrs`. |
 | 3.x | Logging | OCI Audit captures all API calls automatically at the tenancy level (no IaC required). VCN flow logs available via `enable_flow_logs = true`. |
-| 4.x | Networking | VCN flow logs behind `enable_flow_logs` variable (`tf/network.tf`). OCI Service Gateway used for OCI registry access — no public internet required for image pulls. |
+| 4.x | Networking | VCN flow logs behind `enable_flow_logs` variable (`tf/network.tf`). NAT gateway (default on, free on OCI) provides internet egress from private workers; OCI Service Gateway provides direct low-latency access to OCI services. Disable NAT (`enable_nat_gateway = false`) only for air-gapped deployments with a custom image mirror. |
 | 6.x | Asset / resource tagging | All OCI resources tagged with `ManagedBy=OpenTofu`, `Environment=demo`, `Purpose=CNCF-demo`, `CostCenter=free-tier`, `Cluster=<name>` via `local.freeform_tags`. |
 
 ---
