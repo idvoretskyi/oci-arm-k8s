@@ -1,16 +1,33 @@
 # ── Authentication & tenancy ────────────────────────────────────────────────────
-# The OCI provider reads ~/.oci/config automatically when these are left null.
+# The OCI provider reads tenancy/user/fingerprint/key from ~/.oci/config
+# automatically (DEFAULT profile) when these are left null.
 # Override only when running in CI or multi-tenancy setups.
 
-variable "region" {
-  description = "OCI region for the cluster."
+variable "oci_profile" {
+  description = "OCI config profile name to read from ~/.oci/config. Defaults to DEFAULT."
   type        = string
-  default     = "uk-london-1"
+  default     = "DEFAULT"
+}
+
+variable "region" {
+  description = <<-EOT
+    OCI region for the cluster.
+    If null (default), the region is read from ~/.oci/config ([oci_profile] stanza).
+    Override with e.g. -var='region=us-ashburn-1'.
+  EOT
+  type        = string
+  default     = null
 }
 
 variable "compartment_ocid" {
-  description = "OCID of the compartment to deploy into. Required."
+  description = <<-EOT
+    OCID of the compartment to deploy into.
+    If null (default), uses the tenancy OCID from ~/.oci/config, which is also
+    the root compartment OCID — suitable for personal and demo tenancies.
+    Override to deploy into a sub-compartment.
+  EOT
   type        = string
+  default     = null
 }
 
 variable "fingerprint" {
@@ -110,7 +127,14 @@ variable "enable_flow_logs" {
 # ── Monitoring ──────────────────────────────────────────────────────────────────
 
 variable "grafana_admin_password" {
-  description = "Admin password for Grafana. Must be set — no default for security reasons."
+  description = <<-EOT
+    Admin password for Grafana.
+    If null (default), a 24-character random password is generated automatically
+    and exposed via `tofu output -raw grafana_admin_password`.
+    Pass -var='grafana_admin_password=...' or set TF_VAR_grafana_admin_password
+    to supply your own password.
+  EOT
   type        = string
+  default     = null
   sensitive   = true
 }

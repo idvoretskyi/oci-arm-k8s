@@ -16,14 +16,20 @@ terraform {
       source  = "hashicorp/helm"
       version = ">= 3.1.1"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0"
+    }
   }
 }
 
 # ── OCI provider ────────────────────────────────────────────────────────────────
-# Reads tenancy/user/region from ~/.oci/config automatically when fingerprint
-# and private_key_path are null (the default). Override via variables for CI.
+# region is derived from local.effective_region (var.region > ~/.oci/config).
+# tenancy/user/fingerprint/key are read from ~/.oci/config automatically when
+# fingerprint and private_key_path are null (the default).
+# Override via variables for CI or multi-tenancy setups.
 provider "oci" {
-  region           = var.region
+  region           = local.effective_region
   fingerprint      = var.fingerprint
   private_key_path = var.private_key_path
 }
@@ -55,7 +61,7 @@ provider "kubernetes" {
     args = [
       "ce", "cluster", "generate-token",
       "--cluster-id", oci_containerengine_cluster.arm_cluster.id,
-      "--region", var.region
+      "--region", local.effective_region
     ]
   }
 }
@@ -72,7 +78,7 @@ provider "helm" {
       args = [
         "ce", "cluster", "generate-token",
         "--cluster-id", oci_containerengine_cluster.arm_cluster.id,
-        "--region", var.region
+        "--region", local.effective_region
       ]
     }
   }

@@ -1,7 +1,7 @@
 # ── VCN ─────────────────────────────────────────────────────────────────────────
 
 resource "oci_core_vcn" "vcn" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   cidr_blocks    = ["10.0.0.0/16"]
   display_name   = "${local.cluster_name}-vcn"
   dns_label      = "armokecluster"
@@ -11,7 +11,7 @@ resource "oci_core_vcn" "vcn" {
 # ── Internet Gateway (public subnet / LB / API endpoint) ────────────────────────
 
 resource "oci_core_internet_gateway" "igw" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-igw"
   freeform_tags  = local.freeform_tags
@@ -29,7 +29,7 @@ locals {
 }
 
 resource "oci_core_service_gateway" "sgw" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-sgw"
   freeform_tags  = local.freeform_tags
@@ -45,7 +45,7 @@ resource "oci_core_service_gateway" "sgw" {
 
 resource "oci_core_nat_gateway" "ngw" {
   count          = var.enable_nat_gateway ? 1 : 0
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-ngw"
   freeform_tags  = local.freeform_tags
@@ -54,7 +54,7 @@ resource "oci_core_nat_gateway" "ngw" {
 # ── Route tables ─────────────────────────────────────────────────────────────────
 
 resource "oci_core_route_table" "public_rt" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-public-rt"
   freeform_tags  = local.freeform_tags
@@ -66,7 +66,7 @@ resource "oci_core_route_table" "public_rt" {
 }
 
 resource "oci_core_route_table" "private_rt" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-private-rt"
   freeform_tags  = local.freeform_tags
@@ -93,7 +93,7 @@ resource "oci_core_route_table" "private_rt" {
 
 # Public subnet security list — API endpoint + LB traffic
 resource "oci_core_security_list" "public_sl" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-public-sl"
   freeform_tags  = local.freeform_tags
@@ -140,7 +140,7 @@ resource "oci_core_security_list" "public_sl" {
 # Private subnet security list — worker nodes (no direct API port exposure)
 # CIS: private nodes must not accept inbound API traffic from internet.
 resource "oci_core_security_list" "private_sl" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-private-sl"
   freeform_tags  = local.freeform_tags
@@ -173,7 +173,7 @@ resource "oci_core_security_list" "private_sl" {
 # ── Network Security Group (OKE cluster endpoint) ─────────────────────────────────
 
 resource "oci_core_network_security_group" "oke_cluster_nsg" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-oke-cluster-nsg"
   freeform_tags  = local.freeform_tags
@@ -278,7 +278,7 @@ resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress
 # ── Subnets ───────────────────────────────────────────────────────────────────────
 
 resource "oci_core_subnet" "public_subnet" {
-  compartment_id             = var.compartment_ocid
+  compartment_id             = local.effective_compartment_ocid
   vcn_id                     = oci_core_vcn.vcn.id
   cidr_block                 = "10.0.1.0/24"
   display_name               = "${local.cluster_name}-public"
@@ -290,7 +290,7 @@ resource "oci_core_subnet" "public_subnet" {
 }
 
 resource "oci_core_subnet" "private_subnet" {
-  compartment_id             = var.compartment_ocid
+  compartment_id             = local.effective_compartment_ocid
   vcn_id                     = oci_core_vcn.vcn.id
   cidr_block                 = "10.0.2.0/24"
   display_name               = "${local.cluster_name}-private"
@@ -305,7 +305,7 @@ resource "oci_core_subnet" "private_subnet" {
 
 resource "oci_logging_log_group" "vcn_flow_logs" {
   count          = var.enable_flow_logs ? 1 : 0
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
   display_name   = "${local.cluster_name}-vcn-flow-logs"
   freeform_tags  = local.freeform_tags
 }
@@ -324,7 +324,7 @@ resource "oci_logging_log" "public_subnet_flow_log" {
       service     = "flowlogs"
       source_type = "OCISERVICE"
     }
-    compartment_id = var.compartment_ocid
+    compartment_id = local.effective_compartment_ocid
   }
 
   is_enabled         = true
@@ -345,7 +345,7 @@ resource "oci_logging_log" "private_subnet_flow_log" {
       service     = "flowlogs"
       source_type = "OCISERVICE"
     }
-    compartment_id = var.compartment_ocid
+    compartment_id = local.effective_compartment_ocid
   }
 
   is_enabled         = true

@@ -8,7 +8,7 @@ module "monitoring" {
 
   create_storage_class   = true
   storage_class          = "oci-bv-paravirtualized"
-  grafana_admin_password = var.grafana_admin_password
+  grafana_admin_password = local.effective_grafana_password
 
   depends_on = [
     oci_containerengine_node_pool.arm_pool,

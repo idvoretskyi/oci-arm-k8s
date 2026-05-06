@@ -18,7 +18,7 @@ output "api_endpoint" {
 
 output "kubeconfig_command" {
   description = "Run this command to configure kubectl for the cluster."
-  value       = "oci ce cluster create-kubeconfig --cluster-id ${oci_containerengine_cluster.arm_cluster.id} --file ~/.kube/config --region ${var.region} --token-version 2.0.0 --context-name ${oci_containerengine_cluster.arm_cluster.name}"
+  value       = "oci ce cluster create-kubeconfig --cluster-id ${oci_containerengine_cluster.arm_cluster.id} --file ~/.kube/config --region ${local.effective_region} --token-version 2.0.0 --context-name ${oci_containerengine_cluster.arm_cluster.name}"
 }
 
 # ── Kubernetes versions ───────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ output "vcn_id" {
 
 output "cluster_region" {
   description = "OCI region of the cluster."
-  value       = var.region
+  value       = local.effective_region
 }
 
 # ── Node pool ─────────────────────────────────────────────────────────────────────
@@ -82,4 +82,22 @@ output "grafana_url" {
 output "prometheus_url" {
   description = "Prometheus access URL (port-forward or LoadBalancer)."
   value       = module.monitoring.prometheus_url
+}
+
+output "grafana_admin_password" {
+  description = "Grafana admin password (auto-generated if not supplied). Retrieve with: tofu output -raw grafana_admin_password"
+  value       = local.effective_grafana_password
+  sensitive   = true
+}
+
+# ── Resolved configuration ────────────────────────────────────────────────────
+
+output "compartment_ocid_in_use" {
+  description = "Compartment OCID actually used (resolved from var or ~/.oci/config)."
+  value       = local.effective_compartment_ocid
+}
+
+output "region_in_use" {
+  description = "OCI region actually used (resolved from var or ~/.oci/config)."
+  value       = local.effective_region
 }
