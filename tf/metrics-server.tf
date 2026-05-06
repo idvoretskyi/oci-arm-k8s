@@ -1,12 +1,12 @@
 # ── Metrics Server ────────────────────────────────────────────────────────────────
 # Deployed via Helm for idempotency and version control.
-# Replaces the previous null_resource + kubectl approach.
-# Enables `kubectl top nodes/pods` for the demo.
+# Enables `kubectl top nodes/pods`. Multi-arch image runs natively on arm64.
 
 resource "helm_release" "metrics_server" {
   name       = "metrics-server"
   repository = "https://kubernetes-sigs.github.io/metrics-server/"
   chart      = "metrics-server"
+  version    = "3.13.0"
   namespace  = "kube-system"
 
   # ARM-compatible: the official chart multi-arch image includes linux/arm64.
