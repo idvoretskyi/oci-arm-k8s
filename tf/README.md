@@ -50,8 +50,8 @@ node_pool_kubernetes_version   = null   # follows cluster by default
 # CIS: restrict API to specific IPs (default open for demo)
 api_allowed_cidrs = ["0.0.0.0/0"]
 
-# Cost: enable NAT gateway for unrestricted internet egress (~$32/mo)
-enable_nat_gateway = false
+  # NAT gateway: free on OCI (no hourly charge); enabled by default for outbound egress
+  enable_nat_gateway = true
 
 # CIS: enable VCN flow logs
 enable_flow_logs = false
@@ -109,7 +109,12 @@ tofu destroy -var='compartment_ocid=...' -var='grafana_admin_password=...'
 
 ## ARM Notes
 
-- All images must support `linux/arm64`. Most upstream images are multi-arch.
+- Worker nodes use OKE-prebuilt Oracle Linux 8.10 aarch64 images. These ship with
+  kubelet, containerd, and OCI agents preinstalled and version-locked to the control
+  plane. Oracle Linux 8.10 is the only OKE-blessed ARM64 worker OS; OL9/OL10/Ubuntu
+  aarch64 images exist in OCI but are not offered as OKE-prebuilt worker images.
+  The latest available build for the cluster K8s version is selected automatically.
+- All container images must support `linux/arm64`. Most upstream images are multi-arch.
 - Java / JVM workloads run unchanged on ARM.
 - Compiled Go / Rust binaries must be built for `GOARCH=arm64`.
 - Node is pre-labeled `kubernetes.io/arch=arm64` for nodeSelector use.

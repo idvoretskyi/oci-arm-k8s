@@ -91,13 +91,14 @@ variable "api_allowed_cidrs" {
 
 variable "enable_nat_gateway" {
   description = <<-EOT
-    When false (default) worker nodes use an OCI Service Gateway for outbound
-    traffic — free, reaches OCI services and the OCI container registry.
-    Set to true to add a NAT gateway (~$32/month) for unrestricted internet egress
-    (e.g. pulling images from DockerHub or GitHub).
+    Enable a NAT gateway for outbound internet egress from private worker nodes.
+    OCI NAT gateways have no hourly charge — they are free. Only egress data
+    transfer costs apply, and the Always Free tier includes 10 TB/month.
+    Set to false only for fully air-gapped setups where you supply your own
+    image mirror or pull-through cache.
   EOT
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_flow_logs" {

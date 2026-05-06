@@ -1,22 +1,22 @@
 locals {
-  resource_name_prefix = var.monitoring_namespace
-  monitoring_tags = {
-    "ResourceType" = "Monitoring"
-    "Component"    = "KubePrometheusStack"
-    "AutomatedBy"  = "OpenTofu"
-    "CreatedAt"    = timestamp()
+  # Clean label set applied consistently to all Kubernetes resources managed
+  # by this module. Uses chart_version so labels stay current on upgrades.
+  common_labels = {
+    "app.kubernetes.io/managed-by" = "opentofu"
+    "app.kubernetes.io/component"  = "monitoring"
+    "app.kubernetes.io/part-of"    = "kube-prometheus-stack"
+    "app.kubernetes.io/version"    = var.chart_version
   }
-  all_tags             = merge(var.tags, local.monitoring_tags)
+
+  # When Grafana ingress is enabled, force ClusterIP so the ingress controller
+  # routes traffic; otherwise respect the caller's preference.
   grafana_service_type = var.grafana_ingress_enabled ? "ClusterIP" : var.grafana_service_type
 }
 
 resource "kubernetes_namespace_v1" "monitoring" {
   metadata {
-    name = var.monitoring_namespace
-    labels = {
-      name                           = var.monitoring_namespace
-      "app.kubernetes.io/managed-by" = "terraform"
-    }
+    name   = var.monitoring_namespace
+    labels = local.common_labels
   }
 }
 
@@ -24,7 +24,8 @@ resource "kubernetes_storage_class_v1" "monitoring_storage" {
   count = var.create_storage_class ? 1 : 0
 
   metadata {
-    name = var.storage_class
+    name   = var.storage_class
+    labels = local.common_labels
   }
 
   storage_provisioner    = "blockvolume.csi.oraclecloud.com"
@@ -33,8 +34,13 @@ resource "kubernetes_storage_class_v1" "monitoring_storage" {
   volume_binding_mode    = "WaitForFirstConsumer"
 
   parameters = {
-    "fsType"         = "ext4"
-    "attachmentType" = "paravirtualized"
+    # Use hyphen-separated key "attachment-type" (not camelCase "attachmentType").
+    # The OCI CSI provisioner (blockvolume.csi.oraclecloud.com) reads this key
+    # and writes it into PV volumeAttributes so the external-attacher passes it
+    # to the OCI AttachVolume API. Without this the provisioner defaults to iSCSI,
+    # which fails on nodes with is_pv_encryption_in_transit_enabled = true.
+    "attachment-type" = "paravirtualized"
+    "fsType"          = "ext4"
   }
 }
 
@@ -59,7 +65,6 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana_admin_password      = var.grafana_admin_password
       grafana_persistence_enabled = var.grafana_persistence_enabled
       grafana_storage_size        = var.grafana_storage_size
-      alertmanager_storage_size   = var.alertmanager_storage_size
       node_exporter_enabled       = var.node_exporter_enabled
       kube_state_metrics_enabled  = var.kube_state_metrics_enabled
     })

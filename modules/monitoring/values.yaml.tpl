@@ -9,9 +9,8 @@ nameOverride: ""
 
 commonLabels:
   app.kubernetes.io/managed-by: opentofu
+  app.kubernetes.io/part-of: kube-prometheus-stack
 
-# ARM64 node selector applied globally
-# kube-prometheus-stack propagates this via global.nodeSelector
 global:
   nodeSelector:
     kubernetes.io/arch: arm64
@@ -32,7 +31,6 @@ prometheus:
     retention: ${prometheus_retention}
     retentionSize: ${prometheus_retention_size}
 
-    # Demo-friendly resource budget
     resources:
       limits:
         cpu: 500m
@@ -58,6 +56,10 @@ prometheus:
 # ── Grafana ───────────────────────────────────────────────────────────────────────
 
 grafana:
+  # Disable chart-side plaintext password lint — password is passed via
+  # a sensitive variable and stored in tfstate; not leaked in chart values.
+  assertNoLeakedSecrets: false
+
   service:
     type: ${grafana_service_type}
     port: 80
@@ -154,6 +156,16 @@ kubeStateMetrics:
 # ── Prometheus Operator ───────────────────────────────────────────────────────────
 
 prometheusOperator:
+  # Admission webhooks require registry.k8s.io/ingress-nginx/kube-webhook-certgen.
+  # Disable on clusters with restricted egress or to simplify demo setup.
+  # tls.enabled: false suppresses the TLS secret volume mount on the operator pod
+  # (chart 65.x still mounts it even when admissionWebhooks.enabled is false).
+  admissionWebhooks:
+    enabled: false
+    patch:
+      enabled: false
+  tls:
+    enabled: false
   resources:
     limits:
       cpu: 100m

@@ -1,12 +1,3 @@
-variable "cluster_id" {
-  description = "OCID of the OKE cluster."
-  type        = string
-  validation {
-    condition     = can(regex("^ocid1\\.cluster\\.", var.cluster_id))
-    error_message = "cluster_id must be a valid OCI cluster OCID."
-  }
-}
-
 variable "monitoring_namespace" {
   description = "Kubernetes namespace for monitoring components."
   type        = string
@@ -24,7 +15,7 @@ variable "release_name" {
 }
 
 variable "chart_version" {
-  description = "kube-prometheus-stack Helm chart version. Pinned to a recent release compatible with K8s 1.28+."
+  description = "kube-prometheus-stack Helm chart version. Tested on K8s 1.35; chart 65.x supports K8s 1.25+."
   type        = string
   default     = "65.8.1"
 }
@@ -38,7 +29,7 @@ variable "helm_timeout" {
 variable "storage_class" {
   description = "Storage class for persistent volumes."
   type        = string
-  default     = "oci-bv"
+  default     = "oci-bv-paravirtualized"
 }
 
 variable "create_storage_class" {
@@ -51,7 +42,7 @@ variable "create_storage_class" {
 variable "prometheus_storage_size" {
   description = "Persistent volume size for Prometheus data."
   type        = string
-  default     = "10Gi"
+  default     = "50Gi"
 }
 
 variable "prometheus_retention" {
@@ -69,19 +60,13 @@ variable "prometheus_retention_size" {
 variable "grafana_storage_size" {
   description = "Persistent volume size for Grafana."
   type        = string
-  default     = "2Gi"
+  default     = "50Gi"
 }
 
 variable "grafana_persistence_enabled" {
   description = "Enable Grafana persistent storage."
   type        = bool
   default     = true
-}
-
-variable "alertmanager_storage_size" {
-  description = "Persistent volume size for Alertmanager."
-  type        = string
-  default     = "2Gi"
 }
 
 variable "grafana_admin_password" {
@@ -155,16 +140,4 @@ variable "kube_state_metrics_enabled" {
   description = "Enable kube-state-metrics for Kubernetes object metrics."
   type        = bool
   default     = true
-}
-
-variable "additional_helm_values" {
-  description = "Additional Helm values to merge (map form)."
-  type        = map(string)
-  default     = {}
-}
-
-variable "tags" {
-  description = "Freeform tags to apply to Kubernetes resources."
-  type        = map(string)
-  default     = {}
 }
