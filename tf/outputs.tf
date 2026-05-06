@@ -62,6 +62,11 @@ output "node_shape" {
   value       = oci_containerengine_node_pool.arm_pool.node_shape
 }
 
+output "node_image_name" {
+  description = "OKE-prebuilt worker image selected for this cluster (auto-tracks latest build for the cluster K8s version)."
+  value       = local.node_image_name
+}
+
 output "architecture" {
   description = "CPU architecture of the worker nodes."
   value       = "arm64"

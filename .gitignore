@@ -43,8 +43,6 @@ Thumbs.db
 
 # Log files
 *.log
-tf/.terraform.lock.hcl
-
 # AI assistant files
 .claude/
 tf/.claude/

@@ -157,8 +157,14 @@ kubeStateMetrics:
 
 prometheusOperator:
   # Admission webhooks require registry.k8s.io/ingress-nginx/kube-webhook-certgen.
-  # Disable on clusters with restricted egress.
+  # Disable on clusters with restricted egress or to simplify demo setup.
+  # tls.enabled: false suppresses the TLS secret volume mount on the operator pod
+  # (chart 65.x still mounts it even when admissionWebhooks.enabled is false).
   admissionWebhooks:
+    enabled: false
+    patch:
+      enabled: false
+  tls:
     enabled: false
   resources:
     limits:

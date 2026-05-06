@@ -34,8 +34,13 @@ resource "kubernetes_storage_class_v1" "monitoring_storage" {
   volume_binding_mode    = "WaitForFirstConsumer"
 
   parameters = {
-    "fsType"         = "ext4"
-    "attachmentType" = "paravirtualized"
+    # Use hyphen-separated key "attachment-type" (not camelCase "attachmentType").
+    # The OCI CSI provisioner (blockvolume.csi.oraclecloud.com) reads this key
+    # and writes it into PV volumeAttributes so the external-attacher passes it
+    # to the OCI AttachVolume API. Without this the provisioner defaults to iSCSI,
+    # which fails on nodes with is_pv_encryption_in_transit_enabled = true.
+    "attachment-type" = "paravirtualized"
+    "fsType"          = "ext4"
   }
 }
 
