@@ -6,55 +6,89 @@ OpenTofu configuration for a single-node ARM OKE cluster on OCI, sized for the A
 
 ```
 tf/
-├── variables.tf     — All input variables
-├── locals.tf        — Computed locals (versions, tags, names)
-├── provider.tf      — OCI, Kubernetes, Helm providers
-├── network.tf       — VCN, gateways, route tables, security lists, NSG, subnets
-├── cluster.tf       — OKE cluster resource
-├── node-pool.tf     — ARM node pool resource
+├── variables.tf      — All input variables
+├── locals.tf         — OCI config discovery, computed locals, random password resource
+├── provider.tf       — OCI, Kubernetes, Helm, Random providers
+├── network.tf        — VCN, gateways, route tables, security lists, NSG, subnets
+├── cluster.tf        — OKE cluster resource
+├── node-pool.tf      — ARM node pool resource
 ├── metrics-server.tf — metrics-server Helm release
-├── main.tf          — Monitoring module call
-└── outputs.tf       — All outputs
+├── main.tf           — Monitoring module call
+└── outputs.tf        — All outputs
 ```
 
 ## Quick Start
 
 ```bash
 tofu init
-tofu plan -var='compartment_ocid=ocid1.compartment.oc1..xxx' \
-          -var='grafana_admin_password=changeme'
-tofu apply -var='compartment_ocid=ocid1.compartment.oc1..xxx' \
-           -var='grafana_admin_password=changeme'
+tofu apply   # zero args — reads ~/.oci/config automatically
 ```
 
-Or create a `terraform.tfvars` (gitignored):
+Retrieve the Grafana password after apply:
+```bash
+tofu output -raw grafana_admin_password
+```
+
+## OCI config auto-discovery
+
+Values are resolved in this order (highest priority first):
+
+1. Explicit `-var` flag or `TF_VAR_*` environment variable
+2. `terraform.tfvars` / `*.auto.tfvars` (gitignored)
+3. `~/.oci/config` — profile specified by `var.oci_profile` (default: `DEFAULT`)
+4. Error with a descriptive message
+
+| Value | Auto-source |
+|-------|-------------|
+| `region` | `region` key in the config profile |
+| `compartment_ocid` | `tenancy` key (root compartment OCID) |
+| `grafana_admin_password` | 24-char random password, stable across applies |
+| API credentials | Read by the OCI provider natively from `~/.oci/config` |
+
+To use a non-default profile:
+```bash
+tofu apply -var='oci_profile=MYPROFILE'
+```
+
+To override individual values:
 ```hcl
+# terraform.tfvars (gitignored)
 compartment_ocid       = "ocid1.compartment.oc1..xxx"
-grafana_admin_password = "changeme"
+region                 = "us-ashburn-1"
+grafana_admin_password = "mysecret"
 ```
 
 ## Key Variables
 
 ```hcl
-# Defaults — no changes needed for a basic demo
+# OCI config profile (default: reads [DEFAULT] from ~/.oci/config)
+oci_profile = "DEFAULT"
+
+# Region and compartment: null = auto-discovered from ~/.oci/config
+region           = null
+compartment_ocid = null
+
+# Cluster defaults — no changes needed for a basic demo
 cluster_name   = "arm-oke-demo"
-region         = "uk-london-1"
 node_count     = 1
 node_ocpus     = 2
 node_memory_gb = 12
 
 # K8s version: null = always latest, auto-upgrades on each apply
-kubernetes_version             = null
-node_pool_kubernetes_version   = null   # follows cluster by default
+kubernetes_version           = null
+node_pool_kubernetes_version = null   # follows cluster by default
 
 # CIS: restrict API to specific IPs (default open for demo)
 api_allowed_cidrs = ["0.0.0.0/0"]
 
-  # NAT gateway: free on OCI (no hourly charge); enabled by default for outbound egress
-  enable_nat_gateway = true
+# NAT gateway: free on OCI (no hourly charge); enabled by default for outbound egress
+enable_nat_gateway = true
 
 # CIS: enable VCN flow logs
 enable_flow_logs = false
+
+# Grafana password: null = auto-generated; retrieve with: tofu output -raw grafana_admin_password
+grafana_admin_password = null
 ```
 
 ## Upgrading Kubernetes
@@ -93,7 +127,7 @@ tofu output latest_available_kubernetes_version
 ## Verify Cluster
 
 ```bash
-# Get the kubeconfig command from outputs
+# Configure kubectl from outputs
 eval "$(tofu output -raw kubeconfig_command)"
 
 kubectl get nodes -o wide
@@ -104,7 +138,7 @@ kubectl get pods -A
 ## Cleanup
 
 ```bash
-tofu destroy -var='compartment_ocid=...' -var='grafana_admin_password=...'
+tofu destroy
 ```
 
 ## ARM Notes

@@ -2,7 +2,7 @@
 
 data "oci_containerengine_cluster_option" "options" {
   cluster_option_id = "all"
-  compartment_id    = var.compartment_ocid
+  compartment_id    = local.effective_compartment_ocid
 }
 
 # ── OKE Cluster ───────────────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ data "oci_containerengine_cluster_option" "options" {
 # (Kyverno / OPA Gatekeeper) for runtime enforcement.
 
 resource "oci_containerengine_cluster" "arm_cluster" {
-  compartment_id     = var.compartment_ocid
+  compartment_id     = local.effective_compartment_ocid
   kubernetes_version = local.kubernetes_version
   name               = local.cluster_name
   vcn_id             = oci_core_vcn.vcn.id

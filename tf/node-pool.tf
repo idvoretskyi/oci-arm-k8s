@@ -1,7 +1,7 @@
 # ── Data sources ──────────────────────────────────────────────────────────────────
 
 data "oci_identity_availability_domains" "ads" {
-  compartment_id = var.compartment_ocid
+  compartment_id = local.effective_compartment_ocid
 }
 
 # OKE-prebuilt worker images for this cluster.
@@ -13,7 +13,7 @@ data "oci_identity_availability_domains" "ads" {
 # sources newest-first so element [0] is always the latest available build.
 data "oci_containerengine_node_pool_option" "oke" {
   node_pool_option_id = oci_containerengine_cluster.arm_cluster.id
-  compartment_id      = var.compartment_ocid
+  compartment_id      = local.effective_compartment_ocid
 }
 
 locals {
@@ -32,7 +32,7 @@ locals {
 # node_pool_kubernetes_version to lag behind during staged upgrades.
 
 resource "oci_containerengine_node_pool" "arm_pool" {
-  compartment_id     = var.compartment_ocid
+  compartment_id     = local.effective_compartment_ocid
   cluster_id         = oci_containerengine_cluster.arm_cluster.id
   kubernetes_version = local.node_pool_kubernetes_version
   name               = "${local.cluster_name}-arm-pool"

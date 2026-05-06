@@ -12,15 +12,20 @@ Requires: OCI CLI configured (`~/.oci/config`), [OpenTofu](https://opentofu.org)
 ```bash
 cd tf
 tofu init
-tofu apply -var='compartment_ocid=<your-compartment-ocid>' \
-           -var='grafana_admin_password=<your-password>'
+tofu apply
 ```
+
+That's it — no `-var` flags needed. Region, tenancy/compartment, and Grafana password are all resolved automatically (see [Authentication & defaults](#authentication--defaults) below).
 
 Configure kubectl:
 ```bash
-tofu output kubeconfig_command  # prints the oci ce cluster create-kubeconfig command
-# run the printed command, then:
+eval "$(tofu output -raw kubeconfig_command)"
 kubectl get nodes -o wide
+```
+
+Retrieve the auto-generated Grafana password:
+```bash
+tofu output -raw grafana_admin_password
 ```
 
 ## What You Get
@@ -31,18 +36,56 @@ kubectl get nodes -o wide
 - **Monitoring** — kube-prometheus-stack (Grafana + Prometheus) + metrics-server, tuned for the single demo node
 - **CIS baseline** — split security lists, `api_allowed_cidrs`, tagging, flow logs opt-in; see [`docs/cis-compliance.md`](docs/cis-compliance.md)
 
+## Authentication & defaults
+
+All values are auto-discovered from `~/.oci/config` (the same file used by the OCI CLI). Precedence for each value (highest wins):
+
+| Source | How |
+|--------|-----|
+| Explicit `-var` flag or `TF_VAR_*` env var | `-var='region=us-ashburn-1'` |
+| `terraform.tfvars` / `*.auto.tfvars` (gitignored) | `region = "us-ashburn-1"` |
+| `~/.oci/config` profile (default: `DEFAULT`) | auto-read by OpenTofu |
+| Error | friendly message if value cannot be resolved |
+
+The profile used defaults to `DEFAULT`. Override with `-var='oci_profile=MYPROFILE'`.
+
+**What is auto-discovered:**
+
+| Value | Source |
+|-------|--------|
+| `region` | `region` key in `~/.oci/config` |
+| `compartment_ocid` | `tenancy` key in `~/.oci/config` (= root compartment OCID) |
+| `grafana_admin_password` | 24-char random password, generated once and stored in state |
+| API credentials (user, fingerprint, key) | Read directly by the OCI provider from `~/.oci/config` |
+
+To override any value, pass it as a variable:
+```bash
+tofu apply \
+  -var='compartment_ocid=ocid1.compartment.oc1..xxx' \
+  -var='region=us-ashburn-1' \
+  -var='grafana_admin_password=mysecret'
+```
+
+Or create a gitignored `terraform.tfvars`:
+```hcl
+compartment_ocid       = "ocid1.compartment.oc1..xxx"
+region                 = "us-ashburn-1"
+grafana_admin_password = "mysecret"
+```
+
 ## Configuration
 
 Key variables (full list in [`tf/variables.tf`](tf/variables.tf)):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `compartment_ocid` | **required** | OCI compartment OCID |
-| `region` | `uk-london-1` | Deployment region |
+| `oci_profile` | `DEFAULT` | Profile name to read from `~/.oci/config` |
+| `compartment_ocid` | `null` (from `~/.oci/config`) | OCI compartment OCID; defaults to root compartment |
+| `region` | `null` (from `~/.oci/config`) | Deployment region |
 | `kubernetes_version` | `null` (latest) | Pin with e.g. `"v1.31.1"`; null = auto-upgrade |
 | `api_allowed_cidrs` | `["0.0.0.0/0"]` | Restrict API access to operator CIDRs (CIS K8s 5.4.2) |
-| `enable_nat_gateway` | `true` | NAT gateway for private worker egress. **Free on OCI** (no hourly charge; 10 TB/month egress included). Set false only for air-gapped setups. |
-| `grafana_admin_password` | **required** | Grafana admin password |
+| `enable_nat_gateway` | `true` | NAT gateway for private worker egress. **Free on OCI**. |
+| `grafana_admin_password` | `null` (auto-generated) | Retrieve with `tofu output -raw grafana_admin_password` |
 
 ## Cost
 
@@ -69,7 +112,9 @@ tofu output latest_available_kubernetes_version
 
 ```bash
 kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
-# open http://localhost:3000  (admin / <grafana_admin_password>)
+# open http://localhost:3000
+# username: admin
+# password: $(tofu output -raw grafana_admin_password)
 ```
 
 ## Troubleshooting
@@ -79,6 +124,8 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 **Images not pulling**: Worker nodes use the NAT gateway for internet egress. If you disabled it (`enable_nat_gateway = false`), only OCI Registry is reachable via Service Gateway. Re-enable NAT or supply your own image mirror.
 
 **Cluster not ready after apply**: The `oci` CLI is required for exec-based auth. Ensure it is installed and `~/.oci/config` is valid.
+
+**region/compartment not resolved**: If `~/.oci/config` is missing or the profile doesn't exist, OpenTofu will print a clear error. Pass the values explicitly via `-var` or create a `terraform.tfvars`.
 
 ## Further Reading
 
